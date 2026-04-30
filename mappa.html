@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mappa interattiva - Itinerario Umbria di Betto e Sandra</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=boska@500,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <style>
+    :root, [data-theme="light"] { --color-bg:#f7f6f2; --color-surface:#f9f8f5; --color-surface-2:#fbfbf9; --color-border:#d4d1ca; --color-text:#28251d; --color-text-muted:#7a7974; --color-primary:#01696f; --color-accent:#964219; --radius-lg:.75rem; --radius-xl:1rem; --shadow-md:0 4px 12px rgba(40,37,29,.08); --shadow-lg:0 12px 32px rgba(40,37,29,.12); }
+    [data-theme="dark"] { --color-bg:#171614; --color-surface:#1c1b19; --color-surface-2:#201f1d; --color-border:#393836; --color-text:#cdccca; --color-text-muted:#a5a39f; --color-primary:#4f98a3; --color-accent:#bb653b; --shadow-md:0 4px 12px rgba(0,0,0,.28); --shadow-lg:0 12px 32px rgba(0,0,0,.4); }
+    *{box-sizing:border-box} html,body{height:100%;margin:0} body{font-family:'Satoshi',system-ui,sans-serif;background:var(--color-bg);color:var(--color-text)}
+    .app{display:grid;grid-template-columns:380px 1fr;min-height:100vh} .panel{background:var(--color-surface);border-right:1px solid var(--color-border);padding:2rem;overflow:auto}
+    .map-wrap{position:relative;min-height:100vh} #map{height:100vh;width:100%} h1{font-family:'Boska',Georgia,serif;font-size:clamp(2rem,4vw,3rem);line-height:1.05;margin:0 0 1rem}
+    .subtitle,.small{color:var(--color-text-muted);font-size:.95rem} .toolbar{display:flex;gap:.75rem;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap}
+    .btn{min-height:44px;border:1px solid var(--color-border);background:var(--color-surface-2);color:var(--color-text);border-radius:999px;padding:0 .95rem;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+    .btn.primary{background:var(--color-primary);color:#fff;border-color:transparent} .section{margin-top:2rem} .card{background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:1rem;padding:1.5rem;box-shadow:var(--shadow-md);margin-bottom:1rem}
+    .day{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.75rem}.badge{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .7rem;border-radius:999px;font-size:.82rem;font-weight:700;background:rgba(1,105,111,.11);color:var(--color-primary)}
+    .places{display:grid;gap:.75rem}.place{padding:1rem;border:1px solid var(--color-border);border-radius:.75rem;background:var(--color-surface);cursor:pointer}.place:hover,.place.active{border-color:var(--color-primary);box-shadow:var(--shadow-md)}.place-title{font-weight:700;margin-bottom:.3rem}.meta{color:var(--color-text-muted);font-size:.92rem}
+    .legend{position:absolute;right:16px;bottom:16px;z-index:500;background:rgba(249,248,245,.92);color:#28251d;backdrop-filter:blur(8px);border:1px solid rgba(212,209,202,.9);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow-lg);max-width:270px}.legend h2{font-size:1rem;margin:0 0 .5rem}.legend ul{list-style:none;padding:0;margin:0;display:grid;gap:.35rem;font-size:.92rem}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px}
+    .leaflet-popup-content{font-family:'Satoshi',system-ui,sans-serif}.popup-title{font-weight:700;margin-bottom:.35rem}.note{margin-top:1rem;font-size:.95rem;color:var(--color-text-muted)}
+    @media (max-width:900px){.app{grid-template-columns:1fr}.panel{border-right:none;border-bottom:1px solid var(--color-border)}#map{height:68vh}.map-wrap{min-height:auto}.legend{left:12px;right:12px;bottom:12px;max-width:none}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel">
+      <div class="toolbar">
+        <a class="btn" href="index.html">← Torna all'itinerario</a>
+        <button class="btn primary" id="fitAll">Vedi tutto</button>
+        <button class="btn" data-theme-toggle>Tema</button>
+      </div>
+      <h1>Mappa interattiva</h1>
+      <p class="subtitle">Tutti i punti principali dell'itinerario di Betto e Sandra, già segnati su mappa con suddivisione per giorno.</p>
+
+      <section class="section card">
+        <div class="day"><strong>Giorno 1 · Venerdì 1 maggio</strong><span class="badge">Cascia → Spoleto</span></div>
+        <div class="places" id="day1"></div>
+      </section>
+      <section class="section card">
+        <div class="day"><strong>Giorno 2 · Sabato 2 maggio</strong><span class="badge">Assisi</span></div>
+        <div class="places" id="day2"></div>
+      </section>
+      <section class="section card">
+        <div class="day"><strong>Giorno 3 · Domenica 3 maggio</strong><span class="badge">Spoleto</span></div>
+        <div class="places" id="day3"></div>
+      </section>
+      <p class="note">Ad Assisi il parcheggio più comodo è Giovanni Paolo II. A Spoleto conviene usare il parcheggio Posterna per arrivare più facilmente verso il centro.</p>
+    </aside>
+    <main class="map-wrap">
+      <div id="map"></div>
+      <div class="legend">
+        <h2>Tappe</h2>
+        <ul>
+          <li><span class="dot" style="background:#b45c2e"></span>Giorno 1</li>
+          <li><span class="dot" style="background:#01696f"></span>Giorno 2</li>
+          <li><span class="dot" style="background:#6b7d2a"></span>Giorno 3</li>
+        </ul>
+      </div>
+    </main>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    const places=[
+      {day:1,title:'Basilica e Monastero di Santa Rita',town:'Cascia',coords:[42.7173,13.0146],color:'#b45c2e',desc:'Tappa prioritaria del primo giorno, arrivo nel primo pomeriggio.'},
+      {day:1,title:'Centro storico di Cascia',town:'Cascia',coords:[42.7179,13.0169],color:'#b45c2e',desc:'Passeggiata breve tra il santuario e il borgo.'},
+      {day:1,title:'Alloggio / centro storico',town:'Spoleto',coords:[42.7340,12.7385],color:'#b45c2e',desc:'Base del viaggio per due notti.'},
+      {day:2,title:'Parcheggio Giovanni Paolo II',town:'Assisi',coords:[43.0712,12.6085],color:'#01696f',desc:'Parcheggio consigliato per la Basilica di San Francesco.'},
+      {day:2,title:'Basilica di San Francesco',town:'Assisi',coords:[43.0707,12.6108],color:'#01696f',desc:'Visita prioritaria del secondo giorno.'},
+      {day:2,title:'Piazza del Comune',town:'Assisi',coords:[43.0718,12.6147],color:'#01696f',desc:'Centro storico e zona pranzo.'},
+      {day:2,title:'Basilica di Santa Chiara',town:'Assisi',coords:[43.0704,12.6172],color:'#01696f',desc:'Seconda tappa consigliata ad Assisi.'},
+      {day:2,title:'Rocca Maggiore',town:'Assisi',coords:[43.0736,12.6188],color:'#01696f',desc:'Punto panoramico sulla valle.'},
+      {day:2,title:'Spello (opzionale)',town:'Spello',coords:[42.9923,12.6717],color:'#01696f',desc:'Borgo da aggiungere nel pomeriggio se resta tempo.'},
+      {day:3,title:'Rocca Albornoziana',town:'Spoleto',coords:[42.7370,12.7386],color:'#6b7d2a',desc:'Ottimo punto di partenza per la visita finale.'},
+      {day:3,title:'Ponte delle Torri',town:'Spoleto',coords:[42.7387,12.7351],color:'#6b7d2a',desc:'Luogo simbolo e panoramico.'},
+      {day:3,title:'Duomo di Spoleto',town:'Spoleto',coords:[42.7317,12.7389],color:'#6b7d2a',desc:'Tappa centrale della visita in città.'},
+      {day:3,title:'Piazza del Mercato',town:'Spoleto',coords:[42.7335,12.7398],color:'#6b7d2a',desc:'Passeggiata finale prima della ripartenza.'},
+      {day:3,title:'Parcheggio Posterna',town:'Spoleto',coords:[42.7361,12.7441],color:'#6b7d2a',desc:'Parcheggio consigliato per il centro.'}
+    ];
+    const map=L.map('map',{scrollWheelZoom:true});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+    function icon(color){return L.divIcon({className:'custom-pin',html:`<svg width="26" height="38" viewBox="0 0 26 38" xmlns="http://www.w3.org/2000/svg"><path d="M13 37s11-13.1 11-22C24 6.7 19.1 2 13 2S2 6.7 2 15c0 8.9 11 22 11 22Z" fill="${color}" stroke="white" stroke-width="2"/><circle cx="13" cy="15" r="5" fill="white"/></svg>`,iconSize:[26,38],iconAnchor:[13,38],popupAnchor:[0,-34]});}
+    const bounds=[],markers=[];
+    places.forEach((p,i)=>{const marker=L.marker(p.coords,{icon:icon(p.color)}).addTo(map).bindPopup(`<div class="popup-title">${p.title}</div><div>${p.town}</div><div style="margin-top:6px;color:#666">${p.desc}</div>`);markers.push(marker);bounds.push(p.coords);});
+    L.polyline(places.filter(p=>p.day===1).map(p=>p.coords),{color:'#b45c2e',weight:4,opacity:.8,dashArray:'8 8'}).addTo(map);
+    L.polyline(places.filter(p=>p.day===2).map(p=>p.coords),{color:'#01696f',weight:4,opacity:.8,dashArray:'8 8'}).addTo(map);
+    L.polyline(places.filter(p=>p.day===3).map(p=>p.coords),{color:'#6b7d2a',weight:4,opacity:.8,dashArray:'8 8'}).addTo(map);
+    map.fitBounds(bounds,{padding:[40,40]});
+    function renderList(day,id){const wrap=document.getElementById(id);places.filter(p=>p.day===day).forEach(p=>{const gi=places.indexOf(p);const el=document.createElement('div');el.className='place';el.innerHTML=`<div class="place-title">${p.title}</div><div class="meta">${p.town}</div><div class="meta">${p.desc}</div>`;el.addEventListener('click',()=>{document.querySelectorAll('.place').forEach(x=>x.classList.remove('active'));el.classList.add('active');map.setView(p.coords,Math.max(map.getZoom(),15),{animate:true});markers[gi].openPopup();});wrap.appendChild(el);});}
+    renderList(1,'day1');renderList(2,'day2');renderList(3,'day3');
+    document.getElementById('fitAll').addEventListener('click',()=>map.fitBounds(bounds,{padding:[40,40]}));
+    (function(){const t=document.querySelector('[data-theme-toggle]'),r=document.documentElement;let d=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';r.setAttribute('data-theme',d);t.addEventListener('click',()=>{d=d==='dark'?'light':'dark';r.setAttribute('data-theme',d);});})();
+  </script>
+</body>
+</html>
